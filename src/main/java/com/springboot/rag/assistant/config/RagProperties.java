@@ -26,6 +26,9 @@ public class RagProperties {
     /** Maximum attempts (initial + retries) for ingesting a document before it is marked FAILED. */
     private int maxIngestionAttempts = 3;
 
+    /** Max output tokens for a generated answer. */
+    private int answerMaxTokens = 1024;
+
     public int getChunkSize() {
         return chunkSize;
     }
@@ -64,5 +67,13 @@ public class RagProperties {
 
     public void setMaxIngestionAttempts(int maxIngestionAttempts) {
         this.maxIngestionAttempts = maxIngestionAttempts;
+    }
+
+    public int getAnswerMaxTokens() {
+        return answerMaxTokens;
+    }
+
+    public void setAnswerMaxTokens(int answerMaxTokens) {
+        this.answerMaxTokens = answerMaxTokens;
     }
 }

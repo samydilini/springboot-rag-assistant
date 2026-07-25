@@ -163,10 +163,132 @@ re-drive of `FAILED` documents (optional, Increment 4).
 
 ---
 
+## Increment 3 — Query + answer generation
+
+**Goal:** Answer a natural-language question by retrieving the most relevant chunks
+from pgvector and having Claude generate a grounded answer with source references.
+
+Satisfies these spec requirements: *Accept user questions · Retrieve relevant
+document chunks · Provide retrieved context to the LLM · Generate an answer using
+Claude · Return source references · Query response < 5s · Prompt rules (answer only
+from context; say "I don't know" when unavailable; include document references).*
+
+### 3.1 Dependencies
+
+None new. Retrieval uses the `VectorStore` bean (Increment 1); generation uses the
+official Anthropic SDK + the `@Lazy AnthropicClient` bean (Increment 1).
+
+### 3.2 Query flow
+
+```
+POST /api/query   { "question": "..." }   (@NotBlank)
+   │
+   ├─ Retriever: vectorStore.similaritySearch(query=question, topK=5)
+   │     → the query is embedded locally by the SAME ONNX model used for
+   │       ingestion (PgVectorStore calls the EmbeddingModel bean internally),
+   │       so query- and document-side embeddings always match.
+   │     → returns chunks with text + metadata {document_id, filename, chunk_index} + score
+   │
+   ├─ if no chunks: short-circuit → answer "I don't know based on the provided
+   │     documents." with empty sources (no Claude call — faster, no cost)
+   │
+   ├─ RagPromptBuilder: build system prompt (the three rules) + a user message
+   │     containing the numbered context blocks and the question
+   │
+   ├─ AnswerGenerator: official Anthropic SDK →
+   │     client.messages().create(model=claude-sonnet-5, maxTokens=answerMaxTokens,
+   │                               thinking=disabled, system=..., user=...)
+   │     → concatenate the returned text block(s); handle stop_reason=refusal
+   │
+   └─ 200 OK  { answer, sources:[{documentId, filename, chunkIndex, excerpt, score}] }
+```
+
+### 3.3 Three design decisions (with recommendations)
+
+1. **Extended thinking off for generation.** Sonnet 5 runs *adaptive thinking by
+   default* when `thinking` is omitted, which adds latency against the < 5s target.
+   A grounded RAG answer is a simple synthesis task. **Recommendation:** set
+   `thinking = disabled` for the generation call (Sonnet 5 accepts this). Configurable
+   later if we want deeper reasoning.
+
+2. **No-results behavior.** If retrieval returns zero chunks (empty store), **short-
+   circuit** with the "I don't know" answer and skip the Claude call. Avoids a pointless
+   paid call and is faster. (Non-empty-but-weak matches still go to Claude, which is
+   instructed to say "I don't know" if the context doesn't answer the question.)
+
+3. **Source granularity.** Return **one `SourceReference` per retrieved chunk**
+   (up to Top-K), in ranked order, each with a short text excerpt and the similarity
+   score — not deduplicated per document. Simple, transparent, and matches what was
+   actually fed to the model.
+
+### 3.4 Prompt (draft for your review)
+
+System prompt:
+
+> You are a document assistant. Answer the user's question using ONLY the context
+> provided below. If the context does not contain enough information to answer, reply
+> exactly: "I don't know based on the provided documents." Do not use any outside
+> knowledge. When you answer, cite the source documents you used by their filename.
+
+User message:
+
+```
+Context:
+[1] (filename=sample.pdf, chunk=0)
+<chunk text>
+
+[2] (filename=other.pdf, chunk=3)
+<chunk text>
+
+Question: <the user's question>
+```
+
+### 3.5 Files to add
+
+```
+query/
+  QueryController.java     POST /api/query
+  QueryService.java        orchestrates retrieve → (short-circuit | generate)
+  Retriever.java           wraps vectorStore.similaritySearch (Top-K)
+  RagPromptBuilder.java    builds system + user prompt from question + chunks (pure, unit-tested)
+  AnswerGenerator.java     official Anthropic SDK call; extracts answer text; handles refusal
+  dto/
+    QueryRequest.java      { question }  (@NotBlank)
+    QueryResponse.java     { answer, sources }
+    SourceReference.java   { documentId, filename, chunkIndex, excerpt, score }
+```
+
+`RagProperties` gains `answerMaxTokens` (default 1024), bound from `rag.answer-max-tokens`.
+
+### 3.6 API contract
+
+- `POST /api/query` — JSON `{ "question": "..." }`.
+  - `200 OK` → `QueryResponse { answer, sources[] }`.
+  - `400` for a blank question.
+  - Clean error if `ANTHROPIC_API_KEY` is absent at call time (the lazy client fails on
+    first use) — mapped to a clear `503`-style message rather than a raw stack trace.
+
+### 3.7 Verification
+
+- `./gradlew test` — a focused unit test for `RagPromptBuilder` (context formatting +
+  the three rules present). No network/DB needed.
+- Boot against pgvector, ingest the sample PDF (Increment 2 flow), then:
+  - **If `ANTHROPIC_API_KEY` is set:** `POST /api/query` with a question answerable from
+    the sample → expect a grounded answer + non-empty `sources`; ask an unrelated
+    question → expect the "I don't know" response.
+  - **If no key is available:** verify retrieval returns the expected chunks and that the
+    missing-key path returns the clean error (the live Claude call will be left for you to
+    confirm with a key). I'll call this out explicitly in the summary rather than claim a
+    verified generation path.
+
+### 3.8 Out of scope for Increment 3
+
+Streaming responses; multi-turn/conversational memory; re-ranking or similarity-threshold
+tuning; global exception handler and broader tests (Increment 4).
+
+---
+
 ## Later increments
 
-- **Increment 3 — Query + generation:** retriever (Top-K=5), Claude answer generation
-  with the three prompt rules (answer only from context; say "I don't know" when
-  unsupported; include document references), `QueryResponse` with source references.
 - **Increment 4 — Polish:** global exception handling, validation messages, README run
   notes, broader tests, optional `FAILED` re-drive sweep.
