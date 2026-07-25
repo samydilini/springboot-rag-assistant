@@ -18,10 +18,27 @@ repositories {
     mavenCentral()
 }
 
+extra["springAiVersion"] = "1.0.1"
+
+dependencyManagement {
+    imports {
+        mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+    }
+}
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+
+    // RAG plumbing (Spring AI): local in-process embeddings + pgvector store.
+    // The embedding provider is swappable via Spring AI's EmbeddingModel interface —
+    // replacing this starter with a Voyage/OpenAI one is a dependency + config change only.
+    implementation("org.springframework.ai:spring-ai-starter-model-transformers")
+    implementation("org.springframework.ai:spring-ai-starter-vector-store-pgvector")
+
+    // Claude is used only for answer generation, via the official Anthropic SDK.
+    implementation("com.anthropic:anthropic-java:2.34.0")
 
     runtimeOnly("org.postgresql:postgresql")
 
