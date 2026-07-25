@@ -37,6 +37,10 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-starter-model-transformers")
     implementation("org.springframework.ai:spring-ai-starter-vector-store-pgvector")
 
+    // PDF text extraction (PagePdfDocumentReader / PDFBox). The starters above do not
+    // bundle a document reader, so this is required for ingestion.
+    implementation("org.springframework.ai:spring-ai-pdf-document-reader")
+
     // Claude is used only for answer generation, via the official Anthropic SDK.
     implementation("com.anthropic:anthropic-java:2.34.0")
 

@@ -23,6 +23,9 @@ public class RagProperties {
     /** Claude model used for answer generation. */
     private String generationModel = "claude-sonnet-5";
 
+    /** Maximum attempts (initial + retries) for ingesting a document before it is marked FAILED. */
+    private int maxIngestionAttempts = 3;
+
     public int getChunkSize() {
         return chunkSize;
     }
@@ -53,5 +56,13 @@ public class RagProperties {
 
     public void setGenerationModel(String generationModel) {
         this.generationModel = generationModel;
+    }
+
+    public int getMaxIngestionAttempts() {
+        return maxIngestionAttempts;
+    }
+
+    public void setMaxIngestionAttempts(int maxIngestionAttempts) {
+        this.maxIngestionAttempts = maxIngestionAttempts;
     }
 }
