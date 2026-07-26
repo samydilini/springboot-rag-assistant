@@ -14,7 +14,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @Configuration
 @EnableAsync
 public class AsyncConfig {
-
+//TODO: Make these configurable via application.properties or environment variables
     @Bean(name = "ingestionExecutor")
     public Executor ingestionExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();

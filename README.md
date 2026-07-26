@@ -20,6 +20,41 @@ A Retrieval Augmented Generation service: upload PDFs, and ask questions answere
   grounded prompt → **Claude (`claude-sonnet-5`)** generates the answer with citations.
 - **Claude is used only for generation** (Anthropic has no embeddings API).
 
+
+## Architecture Decisions
+
+- Local ONNX embeddings to minimise API cost.
+- PostgreSQL with pgvector for vector search.
+- Asynchronous document ingestion to keep upload latency low.
+- Grounded prompt to minimise hallucinations.
+- Immediate bounded retries during ingestion rather than scheduled re-drive for the MVP.
+- Authentication intentionally deferred to Version 2.
+
+## Further Enhancements
+
+- Externalize ingestion executor configuration.
+- Tune thread pool sizes based on production workload metrics.
+
+### Retry Sweep
+- Add scheduled retry processing for failed documents.
+- Persist uploaded files in object storage (e.g. S3) so failed documents can be reprocessed later.
+
+### Version 2
+- User authentication with Spring Security.
+- User document isolation.
+- Role-based authorization.
+
+### Scalability
+- Introduce Kafka to decouple document uploads from ingestion.
+- Separate ingestion workers from the API service.
+- Support horizontal scaling of document processors.
+
+### AI Improvements
+- Streaming responses.
+- Hybrid search (keyword + vector).
+- Re-ranking retrieved chunks.
+- Conversation history.
+
 ## Prerequisites
 
 - JDK 21
