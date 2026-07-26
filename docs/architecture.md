@@ -2,23 +2,23 @@
 
 ## Overview
 
-
-                    User
-                     |
-                     |
-              Spring Boot API
-                     |
-        ----------------------------
-        |                          |
-Document Service          Query Service
-|                          |
-|                          |
-PostgreSQL              Vector Search
-|                          |
-pgvector <-------------- Retriever
-|
-|
-Claude
+    
+                        User
+                         |
+                         |
+                  Spring Boot API
+                         |
+            ----------------------------
+            |                          |
+    Document Service          Query Service
+    |                          |
+    |                          |
+    PostgreSQL              Vector Search
+    |                          |
+    pgvector <-------------- Retriever
+    |
+    |
+    Claude
 
 
 ## Components
@@ -66,30 +66,30 @@ Claude:
 
 
 Upload:
-
-User
-|
-Upload PDF
-|
-Extract text
-|
-Chunk text
-|
-Create embeddings
-|
-Store vectors
+    
+    User
+    |
+    Upload PDF
+    |
+    Extract text
+    |
+    Chunk text
+    |
+    Create embeddings
+    |
+    Store vectors
 
 
 Query:
-
-User question
-|
-Create query embedding
-|
-Similarity search
-|
-Retrieve chunks
-|
-Send context to Claude
-|
-Return answer
+    
+    User question
+    |
+    Create query embedding
+    |
+    Similarity search
+    |
+    Retrieve chunks
+    |
+    Send context to Claude
+    |
+    Return answer
